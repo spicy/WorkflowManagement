@@ -1,0 +1,59 @@
+﻿@page "/Processes"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs
+@using WorkflowManagement.Dialogs.Process
+@inject ProcessService processService
+@inject IDialogService DialogService
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true" />
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudButton @onclick="(async () => OpenProcessDialog())" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+    <MudTable Items="@ProcessList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Process ID</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Process ID">@context.Id</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenProcessDialog(await Task.Run(() => processService.GetProcessAsync(context.Id))))" Variant="Variant.Text" Color="Color.Primary">
+                        <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton @onclick="(async () => OpenProcessDialog(await Task.Run(() => processService.GetProcessAsync(context.Id)), true))" Variant="Variant.Text" Color="Color.Primary">
+                        <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private bool isVisible;
+    private IEnumerable<Process> ProcessList = new List<Process>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        ProcessList = await Task.Run(() => processService.GetAllProcessesAsync());
+        _loading = false;
+    }
+
+    private async void OpenProcessDialog(Process process = null, bool delete = false)
+    {
+        isVisible = true;
+        if (!delete)
+        {
+            var parameters = new DialogParameters { ["process"] = process };
+            DialogService.Show<ProcessDialog>(null, parameters);
+        }
+        else
+        {
+            var parameters = new DialogParameters { ["obj"] = process };
+            DialogService.Show<DeleteDialog>(null, parameters);
+        }
+        isVisible = false;
+    }
+}

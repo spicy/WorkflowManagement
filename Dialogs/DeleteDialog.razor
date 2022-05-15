@@ -1,0 +1,33 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject AppDBContext _appDBContext
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <h3>Delete this entity?</h3>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Delete" ButtonType="ButtonType.Submit" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public object obj { get; set; } = null;
+
+    void Cancel() => MudDialog.Cancel();
+
+    protected async void Delete()
+    {
+        _appDBContext.Remove(obj);
+        await _appDBContext.SaveChangesAsync();
+        NavigationManager.NavigateTo("", true);
+    }
+}

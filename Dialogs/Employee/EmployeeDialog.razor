@@ -1,0 +1,100 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject EmployeeService employeeService
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="First Name" HelperText="Max. 8 characters"
+                                          @bind-Value="model.FirstName" For="@(() => model.FirstName)" @bind-Text="obj.FirstName" />
+                            <MudTextField Label="Last Name" HelperText="Max. 8 characters"
+                                          @bind-Value="model.LastName" For="@(() => model.LastName)" @bind-Text="obj.LastName" />
+                            <MudTextField Label="Email" Class="mt-3"
+                                          @bind-Value="model.Email" For="@(() => model.Email)" @bind-Text="obj.Email" />
+                            <MudTextField Label="Phone" HelperText="Max. 10 characters"
+                                          @bind-Value="model.Phone" For="@(() => model.Phone)" @bind-Text="obj.Phone" />
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Employee employee { get; set; } = null;
+
+    void Cancel() => MudDialog.Cancel();
+
+     RegisterEmployeeForm model = new RegisterEmployeeForm();
+    bool success;
+    Employee obj = new Employee();
+
+    public class RegisterEmployeeForm
+    {
+        [Required]
+        [StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        public string FirstName { get; set; }
+
+        [Required]
+        [StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        public string LastName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [Phone]
+        public string Phone { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (employee != null)
+        {
+            obj = employee;
+            model = new RegisterEmployeeForm()
+            {
+                FirstName = obj.FirstName,
+                LastName = obj.LastName,
+                Email = obj.Email,
+                Phone = obj.Phone
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        obj = new Employee()
+        {
+            Id = obj.Id,
+            FirstName = model.FirstName,
+            LastName = model.LastName,
+            Email = model.Email,
+            Phone = model.Phone
+        };
+
+        if(employee == null)
+            await employeeService.InsertEmployeeAsync(obj);
+        else
+            await employeeService.UpdateEmployeeAsync(obj);
+        
+        NavigationManager.NavigateTo("Employees", true);
+    }
+}

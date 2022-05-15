@@ -1,0 +1,75 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject ProcessService processService
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="Process Name" HelperText="Max. 32 characters"
+                                  @bind-Value="model.Name" For="@(() => model.Name)" @bind-Text="obj.Name" />
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Process process { get; set; } = null;
+
+    void Cancel() => MudDialog.Cancel();
+
+    CreateProcessForm model = new CreateProcessForm();
+    bool success;
+    Process obj = new Process();
+
+    public class CreateProcessForm
+    {
+        [Required]
+        [StringLength(32, ErrorMessage = "Name length can't be more than 32.")]
+        public string Name { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (process != null)
+        {
+            obj = process;
+            model = new CreateProcessForm()
+            {
+                Name = obj.Name
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        obj = new Process()
+        {
+            Name = model.Name
+        };
+
+        if(process == null)
+            await processService.InsertProcessAsync(obj);
+        else
+            await processService.UpdateProcessAsync(obj);
+        
+        NavigationManager.NavigateTo("Processes", true);
+    }
+}

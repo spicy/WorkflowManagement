@@ -1,0 +1,110 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject PackageService packageService
+@inject ServiceService serviceService
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="Package Name" HelperText="Max. 32 characters"
+                                  @bind-Value="model.Name" For="@(() => model.Name)" @bind-Text="obj.Name" />
+                            <MudTextField Label="Description" HelperText="Max. 128 characters"
+                                          @bind-Value="model.Description" For="@(() => model.Description)" @bind-Text="obj.Description" />
+                            <MudNumericField Label="Price"
+                                          @bind-Value="model.Price" For="@(() => model.Price)" />
+                            <MudSelect T="string" Label="Services" HelperText="Pick the services for this package" MultiSelection="true" @bind-Value="value" @bind-SelectedValues="options">
+                                @foreach (var service in services)
+                                {
+                                    <MudSelectItem T="string" Value="@service.Name">@service.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Package package { get; set; } = null;
+
+    private List<Service> services { get; set; } = new List<Service>();
+    private string value { get; set; } = "Nothing selected";
+    private HashSet<string> options { get; set; } = new HashSet<string>();
+
+    void Cancel() => MudDialog.Cancel();
+
+    CreatePackageForm model = new CreatePackageForm();
+    bool success;
+    Package obj = new Package();
+
+    public class CreatePackageForm
+    {
+        [Required]
+        [StringLength(32, ErrorMessage = "Name length can't be more than 32.")]
+        public string Name { get; set; }
+
+        [Required]
+        [StringLength(128, ErrorMessage = "Description length can't be more than 128.")]
+        public string Description { get; set; }
+
+        [Required]
+        public double Price { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        services = await serviceService.GetAllServicesAsync();
+
+        if (package != null)
+        {
+            obj = package;
+            model = new CreatePackageForm()
+            {
+                Name = obj.Name,
+                Description = obj.Description,
+                Price = obj.Price
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        obj = new Package()
+        {
+            Name = model.Name,
+            Description = model.Description,
+            Price = model.Price
+        };
+
+        if(package == null)
+            await packageService.InsertPackageAsync(obj);
+        else
+            await packageService.UpdatePackageAsync(obj);
+
+        List<Service> selectedServices = services.FindAll(x => options.Contains(x.Name));
+
+        List<PackageServices> packageServices = new List<PackageServices>();
+
+        foreach (Service service in selectedServices)
+            await packageService.InsertPackageServiceAsync(new PackageServices() { Package = obj, Service = service });
+        
+        NavigationManager.NavigateTo("Packages", true);
+    }
+}

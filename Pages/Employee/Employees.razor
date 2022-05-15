@@ -1,0 +1,60 @@
+﻿@page "/Employees"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs.Employee
+@inject EmployeeService employeeService
+@inject IDialogService DialogService
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true" />
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Employees</MudText>
+    <MudButton @onclick="(async () => OpenEmployeeDialog())" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+
+    <MudTable Items="@EmployeeList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Emp ID</MudTh>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Emp ID">@context.Id</MudTd>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Phone">@context.Phone</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenEmployeeDialog(await Task.Run(() => employeeService.GetEmployeeAsync(context.Id))))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary">
+                    <a class="nav-link" href="DeleteEmployees/@context.Id">
+                        <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                    </a>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private bool isVisible;
+    private IEnumerable<Employee> EmployeeList = new List<Employee>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        EmployeeList = await Task.Run(() => employeeService.GetAllEmployeesAsync());
+        _loading = false;
+    }
+
+    private async void OpenEmployeeDialog(Employee employee = null)
+    {
+        isVisible = true;
+        var parameters = new DialogParameters { ["employee"]=employee };
+        DialogService.Show<EmployeeDialog>(null, parameters);
+        isVisible = false;
+    }
+}

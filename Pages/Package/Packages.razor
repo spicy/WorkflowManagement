@@ -1,0 +1,66 @@
+﻿@page "/Packages"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs
+@using WorkflowManagement.Dialogs.Package
+@inject PackageService packageService
+@inject IDialogService DialogService
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true" />
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Packages</MudText>
+    <MudButton @onclick="(async () => OpenPackageDialog())" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+    <MudTable Items="@PackageList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Package ID</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Price</MudTh>
+            <MudTh>Services</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Package ID">@context.Id</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Price">@context.Price</MudTd>
+            <MudTd DataLabel="ServiceCount">@context.Services.Count</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenPackageDialog(await Task.Run(() => packageService.GetPackageAsync(context.Id))))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton @onclick="(async () => OpenPackageDialog(await Task.Run(() => packageService.GetPackageAsync(context.Id)), true))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private bool isVisible;
+    private IEnumerable<Package> PackageList = new List<Package>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        PackageList = await Task.Run(() => packageService.GetAllPackagesAsync());
+        _loading = false;
+    }
+
+    private async void OpenPackageDialog(Package package = null, bool delete = false)
+    {
+        isVisible = true;
+        if (!delete)
+        {
+            var parameters = new DialogParameters { ["package"] = package };
+            DialogService.Show<PackageDialog>(null, parameters);
+        }
+        else
+        {
+            var parameters = new DialogParameters { ["obj"] = package };
+            DialogService.Show<DeleteDialog>(null, parameters);
+        }
+        isVisible = false;
+    }
+}

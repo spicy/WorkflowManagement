@@ -1,0 +1,74 @@
+﻿@page "/Customers"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs
+@using WorkflowManagement.Dialogs.Customer
+@inject CustomerService customerService
+@inject IDialogService DialogService
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true" />
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Customers</MudText>
+    <MudButton @onclick="(async () => OpenCustomerDialog())" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+    <MudTable Items="@CustomerList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Customer ID</MudTh>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Address</MudTh>
+            <MudTh>City</MudTh>
+            <MudTh>State</MudTh>
+            <MudTh>ZipCode</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Customer ID">@context.Id</MudTd>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Phone">@context.Phone</MudTd>
+            <MudTd DataLabel="Address">@context.Address</MudTd>
+            <MudTd DataLabel="City">@context.City</MudTd>
+            <MudTd DataLabel="State">@context.State</MudTd>
+            <MudTd DataLabel="ZipCode">@context.ZipCode</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenCustomerDialog(await Task.Run(() => customerService.GetCustomerAsync(context.Id))))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton @onclick="(async () => OpenCustomerDialog(await Task.Run(() => customerService.GetCustomerAsync(context.Id)), true))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private bool isVisible;
+    private IEnumerable<Customer> CustomerList = new List<Customer>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        CustomerList = await Task.Run(() => customerService.GetAllCustomersAsync());
+        _loading = false;
+    }
+
+    private async void OpenCustomerDialog(Customer customer = null, bool delete = false)
+    {
+        isVisible = true;
+        if (!delete)
+        {
+            var parameters = new DialogParameters { ["customer"] = customer };
+            DialogService.Show<CustomerDialog>(null, parameters);
+        }
+        else
+        {
+            var parameters = new DialogParameters { ["obj"] = customer };
+            DialogService.Show<DeleteDialog>(null, parameters);
+        }
+        isVisible = false;
+    }
+}

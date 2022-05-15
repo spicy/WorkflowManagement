@@ -1,0 +1,66 @@
+﻿@page "/Services"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs
+@using WorkflowManagement.Dialogs.Service
+@inject ServiceService serviceService
+@inject IDialogService DialogService
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true" />
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Services</MudText>
+    <MudButton @onclick="(async () => OpenServiceDialog())" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+    <MudTable Items="@ServiceList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Service ID</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Price</MudTh>
+            <MudTh>Process</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Service ID">@context.Id</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Price">@context.Price</MudTd> 
+            <MudTd DataLabel="Process">@context.Process.Name</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenServiceDialog(await Task.Run(() => serviceService.GetServiceAsync(context.Id))))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton @onclick="(async () => OpenServiceDialog(await Task.Run(() => serviceService.GetServiceAsync(context.Id)), true))" Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private bool isVisible;
+    private IEnumerable<Service> ServiceList = new List<Service>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        ServiceList = await Task.Run(() => serviceService.GetAllServicesAsync());
+        _loading = false;
+    }
+
+    private async void OpenServiceDialog(Service service = null, bool delete = false)
+    {
+        isVisible = true;
+        if (!delete)
+        {
+            var parameters = new DialogParameters { ["service"] = service };
+            DialogService.Show<ServiceDialog>(null, parameters);
+        }
+        else
+        {
+            var parameters = new DialogParameters { ["obj"] = service };
+            DialogService.Show<DeleteDialog>(null, parameters);
+        }
+        isVisible = false;
+    }
+}

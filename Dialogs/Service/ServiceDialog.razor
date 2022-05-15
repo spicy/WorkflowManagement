@@ -1,0 +1,105 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject ServiceService serviceService
+@inject ProcessService processService
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="Service Name" HelperText="Max. 32 characters"
+                                  @bind-Value="model.Name" For="@(() => model.Name)" @bind-Text="obj.Name" />
+                            <MudTextField Label="Description" HelperText="Max. 128 characters"
+                                          @bind-Value="model.Description" For="@(() => model.Description)" @bind-Text="obj.Description" />
+                            <MudNumericField Label="Price"
+                                          @bind-Value="model.Price" For="@(() => model.Price)" />
+                            <MudSelect T="string" Label="Process" HelperText="Pick the process this service is related to" MultiSelection="false" @bind-SelectedValues="processOptions">
+                                @foreach (var process in processes)
+                                {
+                                    <MudSelectItem T="string" Value="@process.Name">@process.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Service service { get; set; } = null;
+
+     private List<Process> processes { get; set; } = new List<Process>();
+    private HashSet<string> processOptions { get; set; } = new HashSet<string>();
+
+    void Cancel() => MudDialog.Cancel();
+
+    CreateServiceForm model = new CreateServiceForm();
+    bool success;
+    Service obj = new Service();
+
+    public class CreateServiceForm
+    {
+        [Required]
+        [StringLength(32, ErrorMessage = "Name length can't be more than 32.")]
+        public string Name { get; set; }
+
+        [Required]
+        [StringLength(128, ErrorMessage = "Description length can't be more than 128.")]
+        public string Description { get; set; }
+
+        [Required]
+        public double Price { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        processes = await Task.Run(() => processService.GetAllProcessesAsync());
+
+        if (service != null)
+        {
+            obj = service;
+            model = new CreateServiceForm()
+            {
+                Name = obj.Name,
+                Description = obj.Description,
+                Price = obj.Price
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        Process selectedProcess = processes.FirstOrDefault(x => processOptions.Equals(x.Name));
+
+        obj = new Service()
+        {
+            Name = model.Name,
+            Description = model.Description,
+            Price = model.Price,
+            Process = selectedProcess
+        };
+
+        if(service == null)
+            await serviceService.InsertSerivceAsync(obj);
+        else
+            await serviceService.UpdateServiceAsync(obj);
+        
+        NavigationManager.NavigateTo("Services", true);
+    }
+}

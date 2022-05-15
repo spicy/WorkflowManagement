@@ -1,0 +1,131 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+@inject CustomerService customerService
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="First Name" HelperText="Max. 8 characters"
+                                  @bind-Value="model.FirstName" For="@(() => model.FirstName)" @bind-Text="obj.FirstName" />
+                            <MudTextField Label="Last Name" HelperText="Max. 8 characters"
+                                          @bind-Value="model.LastName" For="@(() => model.LastName)" @bind-Text="obj.LastName" />
+                            <MudTextField Label="Email" Class="mt-3"
+                                          @bind-Value="model.Email" For="@(() => model.Email)" @bind-Text="obj.Email" />
+                            <MudTextField Label="Phone" HelperText="Max. 10 characters"
+                                          @bind-Value="model.Phone" For="@(() => model.Phone)" @bind-Text="obj.Phone" />
+                            <MudTextField Label="Address" HelperText="Max. 32 characters"
+                                          @bind-Value="model.Address" For="@(() => model.Address)" @bind-Text="obj.Address" />
+                            <MudTextField Label="City" HelperText="Max. 16 characters"
+                                          @bind-Value="model.City" For="@(() => model.City)" @bind-Text="obj.City" />
+                            <MudTextField Label="State" HelperText="Max. 16 characters"
+                                          @bind-Value="model.State" For="@(() => model.State)" @bind-Text="obj.State" />
+                            <MudTextField Label="ZipCode" HelperText="Max. 8 characters"
+                                          @bind-Value="model.ZipCode" For="@(() => model.ZipCode)" @bind-Text="obj.ZipCode" />
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Customer customer { get; set; } = null;
+
+    void Cancel() => MudDialog.Cancel();
+
+    RegisterCustomerForm model = new RegisterCustomerForm();
+    bool success;
+    Customer obj = new Customer();
+
+    public class RegisterCustomerForm
+    {
+        [Required]
+        [StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        public string FirstName { get; set; }
+
+        [Required]
+        [StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        public string LastName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [Phone]
+        public string Phone { get; set; }
+
+        [Required]
+        [StringLength(32, ErrorMessage = "Address length can't be more than 32.")]
+        public string Address { get; set; }
+
+        [Required]
+        [StringLength(16, ErrorMessage = "City length can't be more than 16.")]
+        public string City { get; set; }
+
+        [Required]
+        [StringLength(16, ErrorMessage = "State length can't be more than 16.")]
+        public string State { get; set; }
+
+        [Required]
+        [StringLength(8, ErrorMessage = "ZipCode length can't be more than 8.")]
+        public string ZipCode { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (customer != null)
+        {
+            obj = customer;
+            model = new RegisterCustomerForm()
+            {
+                FirstName = obj.FirstName,
+                LastName = obj.LastName,
+                Email = obj.Email,
+                Phone = obj.Phone,
+                Address = obj.Address,
+                City = obj.City,
+                State = obj.State,
+                ZipCode = obj.ZipCode
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        obj = new Customer()
+        {
+            FirstName = model.FirstName,
+            LastName = model.LastName,
+            Email = model.Email,
+            Phone = model.Phone,
+            Address = model.Address,
+            City = model.City,
+            State = model.State,
+            ZipCode = model.ZipCode
+        };
+
+        if(customer == null)
+            await customerService.InsertCustomerAsync(obj);
+        else
+            await customerService.UpdateCustomerAsync(obj);
+        
+        NavigationManager.NavigateTo("Customers", true);
+    }
+}

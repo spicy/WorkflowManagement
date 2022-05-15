@@ -1,0 +1,120 @@
+﻿@using WorkflowManagement.Data
+@using System.ComponentModel.DataAnnotations
+
+@inject WorkOrderService workOrderService
+@inject ServiceService serviceService
+@inject PackageService packageService
+@inject CustomerService customerService
+
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.Medium">
+            <div style="max-width: 400px;">
+                <EditForm id="form" Model="@model" OnValidSubmit="OnValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudCard>
+                        <MudCardContent>
+                            <!--Customer autocomplete-->
+                           <MudAutocomplete T="string" Label="Customer" SelectValueOnTab="true" @bind-Value="model.Customer" SearchFunc="@(args => Customer.CustomerSearch(args, CustomerList))"
+                                For="@(() => model.Customer)"
+                                ResetValueOnEmptyText="true"
+                                CoerceText="true" CoerceValue="true"
+                                AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" />
+                            <!--Service-->
+                            <MudSelect T="string" Label="Services" HelperText="Pick the services for this work order" MultiSelection="true" @bind-SelectedValues="serviceOptions">
+                                @foreach (var service in services)
+                                {
+                                    <MudSelectItem T="string" Value="@service.Name">@service.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <!--Package-->
+                            <MudSelect T="string" Label="Packages" HelperText="Pick the packages for this work order" MultiSelection="true" @bind-SelectedValues="packageOptions">
+                                @foreach (var package in packages)
+                                {
+                                    <MudSelectItem T="string" Value="@package.Name">@package.Name</MudSelectItem>
+                                } 
+                            </MudSelect>
+                        </MudCardContent>
+                    </MudCard>
+                </EditForm>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Form="form" Color="Color.Primary">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    private Dictionary<int, string> CustomerList = new Dictionary<int, string>();
+
+    [Parameter] public WorkOrder workOrder { get; set; } = null;
+
+    private List<Service> services { get; set; } = new List<Service>();
+    private List<Package> packages { get; set; } = new List<Package>();
+
+    private HashSet<string> serviceOptions { get; set; } = new HashSet<string>();
+    private HashSet<string> packageOptions { get; set; } = new HashSet<string>();
+
+    void Cancel() => MudDialog.Cancel();
+
+    CreateWorkOrderForm model = new CreateWorkOrderForm();
+    bool success;
+    WorkOrder obj = new WorkOrder();
+
+    public class CreateWorkOrderForm
+    {
+        [Required]
+        public string Customer { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        services = await Task.Run(() => serviceService.GetAllServicesAsync());
+        packages = await Task.Run(() => packageService.GetAllPackagesAsync());
+
+        List<Customer> list = await Task.Run(() => customerService.GetAllCustomersAsync());
+        foreach(Customer c in list)
+            CustomerList.Add(c.Id, c.FirstName + ' ' + c.LastName);
+            
+        if (workOrder != null)
+        {
+            obj = workOrder;
+            model = new CreateWorkOrderForm()
+            {
+                Customer = obj.Customer.Id.ToString(),
+            };
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+
+        obj = new WorkOrder()
+        {
+            Customer = await customerService.GetCustomerAsync(CustomerList.First(x => x.Value == model.Customer).Key),
+        };
+
+        if (workOrder == null)
+            await workOrderService.InsertWorkOrderAsync(obj);
+        else
+            await workOrderService.UpdateWorkOrderAsync(obj);
+
+        List<Service> selectedServices = services.FindAll(x => serviceOptions.Equals(x.Name));
+        List<Package> selectedPackages = packages.FindAll(x => packageOptions.Equals(x.Id.ToString()));
+
+        foreach (Service service in selectedServices)
+            await workOrderService.InsertWorkOrderServiceAsync(new WorkOrderServices() { WorkOrder = obj, Service = service });
+        foreach (Package package in selectedPackages)
+            await workOrderService.InsertWorkOrderPackageAsync(new WorkOrderPackages() { WorkOrder = obj, Package = package });
+
+        NavigationManager.NavigateTo("/", true);
+    }
+}

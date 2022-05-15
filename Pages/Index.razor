@@ -1,0 +1,64 @@
+﻿@page "/"
+@using WorkflowManagement.Data
+@using WorkflowManagement.Dialogs
+@using WorkflowManagement.Dialogs.WorkOrder
+@inject WorkOrderService workOrderService
+@inject IDialogService DialogService
+
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Work Orders</MudText>
+    <MudButton @onclick="(async () => OpenWorkOrderDialog(MudDialogOptions.fullWidth))" Variant="Variant.Filled" Color="Color.Primary">Add New</MudButton>
+    <MudTable Items="@WorkOrderList" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Work Order ID</MudTh>
+            <MudTh>Customer</MudTh>
+            <MudTh>Year</MudTh>
+            <MudTh>Make</MudTh>
+            <MudTh>Model</MudTh>
+            <MudTh>Color</MudTh>
+            <MudTh>DateCreated</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Work Order ID">@context.Id</MudTd>
+            <MudTd DataLabel="Customer">@context.Customer.FirstName @context.Customer.LastName</MudTd>
+            <MudTd DataLabel="Date Created">@context.DateCreated</MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton @onclick="(async () => OpenWorkOrderDialog(MudDialogOptions.fullWidth, await Task.Run(() => workOrderService.GetWorkOrderAsync(context.Id))))"
+                            Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-pencil" aria-hidden="true">Edit</span>
+                </MudButton>
+                <MudButton @onclick="(async () => OpenWorkOrderDialog(MudDialogOptions.fullWidth, await Task.Run(() => workOrderService.GetWorkOrderAsync(context.Id)), true))"
+                            Variant="Variant.Text" Color="Color.Primary">
+                    <span class="oi oi-trash" aria-hidden="true">Delete</span>
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private bool _loading;
+    private IEnumerable<WorkOrder> WorkOrderList = new List<WorkOrder>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        WorkOrderList = await Task.Run(() => workOrderService.GetAllWorkOrdersAsync());
+        _loading = false;
+    }
+
+    private async void OpenWorkOrderDialog(DialogOptions options, WorkOrder WorkOrder = null, bool delete = false)
+    {
+        if (!delete)
+        {
+            var parameters = new DialogParameters { ["WorkOrder"] = WorkOrder };
+            DialogService.Show<WorkflowManagement.Dialogs.WorkOrder.WorkOrderDialog>(null, parameters, options);
+        }
+        else
+        {
+            var parameters = new DialogParameters { ["obj"] = WorkOrder };
+            DialogService.Show<DeleteDialog>(null, parameters, options);
+        }
+    }
+}
